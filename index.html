@@ -291,71 +291,218 @@ input[type="file"]{
 
 <script>
 
-// फ़ाइल इनपुट और बटन्स को सेलेक्ट करना
-const fileInput = document.querySelector('input[type="file"]');
-const removeBtn = document.querySelector('button');
-const resultImg = document.querySelector('#resultImage') || document.querySelector('img');
-const downloadBtn = document.querySelector('#downloadBtn') || document.querySelector('a[download]');
+const photoInput = document.getElementById("photoInput");
+const originalImage = document.getElementById("originalImage");
+const resultImage = document.getElementById("resultImage");
 
-if (removeBtn) {
-  removeBtn.addEventListener('click', async () => {
-    // 1. चेक करें कि फ़ोटो चुनी गई है या नहीं
-    const file = fileInput ? fileInput.files[0] : null;
-    if (!file) {
-      alert('कृपया पहले एक फ़ोटो चुनें!');
-      return;
+const originalText = document.getElementById("originalText");
+const resultText = document.getElementById("resultText");
+
+const removeBtn = document.getElementById("removeBtn");
+const downloadBtn = document.getElementById("downloadBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+const progress = document.getElementById("progress");
+const progressFill = document.getElementById("progressFill");
+const progressText = document.getElementById("progressText");
+
+let selectedImage = null;
+let originalImageData = "";
+
+
+// ===============================
+// PHOTO SELECT
+// ===============================
+
+photoInput.addEventListener("change", function () {
+
+    const file = this.files[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+        alert("कृपया JPG, PNG या WEBP फोटो चुनें।");
+        return;
     }
 
-    // 2. लोडिंग स्टेटस दिखाना
-    const originalText = removeBtn.innerText;
-    removeBtn.innerText = 'प्रोसेसिंग चल रही है...';
-    removeBtn.disabled = true;
+    selectedImage = file;
 
-    // 3. फ़ोटो को Base64 में बदलना
     const reader = new FileReader();
+
+    reader.onload = function (event) {
+
+        originalImageData = event.target.result;
+
+        originalImage.onload = function () {
+
+            originalImage.style.display = "block";
+            originalText.style.display = "none";
+
+            removeBtn.disabled = false;
+
+        };
+
+        originalImage.onerror = function () {
+
+            alert("फोटो load नहीं हो पाई। दूसरी फोटो चुनें।");
+
+        };
+
+        originalImage.src = originalImageData;
+
+    };
+
     reader.readAsDataURL(file);
 
-    reader.onload = async () => {
-      try {
-        const base64Data = reader.result.split(',')[1];
+    // Reset previous result
+    resultImage.src = "";
+    resultImage.style.display = "none";
 
-        // 4. Vercel बैकएंड API (/api/remove) को कॉल करना
-        const response = await fetch('/api/remove', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64Data })
-        });
+    resultText.style.display = "block";
 
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || 'बैकग्राउंड हटाने में विफल');
+    downloadBtn.style.display = "none";
+
+    progress.style.display = "none";
+    progressFill.style.width = "0%";
+
+});
+
+
+// ===============================
+// REMOVE BACKGROUND
+// ===============================
+
+removeBtn.addEventListener("click", function () {
+
+    if (!selectedImage) {
+
+        alert("पहले फोटो चुनें।");
+        return;
+
+    }
+
+    progress.style.display = "block";
+
+    progressFill.style.width = "0%";
+
+    let value = 0;
+
+    progressText.innerText = "Preparing...";
+
+    const timer = setInterval(function () {
+
+        value += 10;
+
+        progressFill.style.width = value + "%";
+
+        if (value <= 30) {
+
+            progressText.innerText =
+                "Preparing image...";
+
+        } else if (value <= 60) {
+
+            progressText.innerText =
+                "Uploading image...";
+
+        } else if (value <= 90) {
+
+            progressText.innerText =
+                "Processing...";
+
+        } else {
+
+            progressText.innerText =
+                "Almost ready...";
+
         }
 
-        // 5. नतीजा (पारदर्शी फ़ोटो) दिखाना
-        const blob = await response.blob();
-        const imageUrl = URL.createObjectURL(blob);
+        if (value >= 100) {
 
-        if (resultImg) {
-          resultImg.src = imageUrl;
-          resultImg.style.display = 'block';
+            clearInterval(timer);
+
+            progressText.innerText =
+                "Backend connection required";
+
+            setTimeout(function () {
+
+                alert(
+                    "Frontend सही काम कर रहा है। अब असली AI Background Removal के लिए Backend/API जोड़ना बाकी है।"
+                );
+
+            }, 300);
+
         }
 
-        if (downloadBtn) {
-          downloadBtn.href = imageUrl;
-          downloadBtn.style.display = 'inline-block';
-        }
+    }, 150);
 
-        alert('बैकग्राउंड सफलतापूर्वक हट गया!');
-      } catch (err) {
-        alert('त्रुटि: ' + err.message);
-      } finally {
-        removeBtn.innerText = originalText;
-        removeBtn.disabled = false;
-      }
-    };
-  });
-}
+});
 
+
+// ===============================
+// DOWNLOAD
+// ===============================
+
+downloadBtn.addEventListener("click", function () {
+
+    if (!resultImage.src) {
+
+        alert("पहले background remove करें।");
+        return;
+
+    }
+
+    const link = document.createElement("a");
+
+    link.href = resultImage.src;
+
+    link.download =
+        "vishal-bg-removed.png";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+});
+
+
+// ===============================
+// NEW PHOTO / RESET
+// ===============================
+
+resetBtn.addEventListener("click", function () {
+
+    photoInput.value = "";
+
+    originalImage.src = "";
+    resultImage.src = "";
+
+    originalImage.style.display = "none";
+    resultImage.style.display = "none";
+
+    originalText.style.display = "block";
+    resultText.style.display = "block";
+
+    removeBtn.disabled = true;
+
+    downloadBtn.style.display = "none";
+
+    progress.style.display = "none";
+
+    progressFill.style.width = "0%";
+
+    progressText.innerText =
+        "Preparing...";
+
+    selectedImage = null;
+
+    originalImageData = "";
+
+});
+
+</script>
 
 </body>
 </html>
