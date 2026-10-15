@@ -307,186 +307,240 @@ const progressFill = document.getElementById("progressFill");
 const progressText = document.getElementById("progressText");
 
 let selectedImage = null;
-let originalImageData = "";
+let resultUrl = null;
+let isProcessing = false;
 
-
-// ===============================
-// PHOTO SELECT
-// ===============================
-
+// फोटो चुनने पर प्रीव्यू दिखाएँ
 photoInput.addEventListener("change", function () {
-
     const file = this.files[0];
 
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
         alert("कृपया JPG, PNG या WEBP फोटो चुनें।");
+        this.value = "";
+        return;
+    }
+
+    // 10 MB की सीमा
+    if (file.size > 10 * 1024 * 1024) {
+        alert("कृपया 10 MB से छोटी फोटो चुनें।");
+        this.value = "";
         return;
     }
 
     selectedImage = file;
 
-    const reader = new FileReader();
+    // पुराना रिज़ल्ट साफ करें
+    if (resultUrl) {
+        URL.revokeObjectURL(resultUrl);
+        resultUrl = null;
+    }
 
-    reader.onload = function (event) {
-
-        originalImageData = event.target.result;
-
-        originalImage.onload = function () {
-
-            originalImage.style.display = "block";
-            originalText.style.display = "none";
-
-            removeBtn.disabled = false;
-
-        };
-
-        originalImage.onerror = function () {
-
-            alert("फोटो load नहीं हो पाई। दूसरी फोटो चुनें।");
-
-        };
-
-        originalImage.src = originalImageData;
-
-    };
-
-    reader.readAsDataURL(file);
-
-    // Reset previous result
-    resultImage.src = "";
+    resultImage.removeAttribute("src");
     resultImage.style.display = "none";
-
     resultText.style.display = "block";
-
+    resultText.innerText = "Result will appear here";
     downloadBtn.style.display = "none";
 
     progress.style.display = "none";
     progressFill.style.width = "0%";
 
+    // तुरंत Original Image प्रीव्यू
+    const previewUrl = URL.createObjectURL(file);
+
+    originalImage.onload = function () {
+        originalImage.style.display = "block";
+        originalText.style.display = "none";
+        URL.revokeObjectURL(previewUrl);
+    };
+
+    originalImage.onerror = function () {
+        URL.revokeObjectURL(previewUrl);
+        originalImage.style.display = "none";
+        originalText.style.display = "block";
+        originalText.innerText = "Photo could not be loaded";
+    };
+
+    originalImage.src = previewUrl;
+
+    removeBtn.disabled = false;
 });
 
-
-// ===============================
-// REMOVE BACKGROUND
-// ===============================
-
-removeBtn.addEventListener("click", function () {
-
-    if (!selectedImage) {
-
-        alert("पहले फोटो चुनें।");
+// Remove Background
+removeBtn.addEventListener("click", async function () {
+    if (!selectedImage || isProcessing) {
+        if (!selectedImage) alert("पहले फोटो चुनें।");
         return;
-
     }
 
+    isProcessing = true;
+    removeBtn.disabled = true;
+    downloadBtn.style.display = "none";
+
     progress.style.display = "block";
+    progressFill.style.width = "10%";
+    progressText.innerText = "फोटो तैयार हो रही है...";
 
-    progressFill.style.width = "0%";
+    try {
+        // फोटो को Base64 Data URL में बदलें
+        const imageBase64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
 
-    let value = 0;
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(
+                new Error("फोटो पढ़ी नहीं जा सकी।")
+            );
 
-    progressText.innerText = "Preparing...";
+            reader.readAsDataURL(selectedImage);
+        });
 
-    const timer = setInterval(function () {
+        progressFill.style.width = "30%";
+        progressText.innerText = "AI सर्वर पर फोटो भेजी जा रही है...";
 
-        value += 10;
+        // Backend को POST रिक्वेस्ट
+        const response = await fetch("/api/remove", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                imageBase64: imageBase64
+            })
+        });
 
-        progressFill.style.width = value + "%";
+        progressFill.style.width = "75%";
+        progressText.innerText = "AI फोटो प्रोसेस कर रहा है...";
 
-        if (value <= 30) {
+        // Backend की त्रुटि को पढ़ें
+        if (!response.ok) {
+            let errorMessage = "Background removal असफल रहा।";
 
-            progressText.innerText =
-                "Preparing image...";
+            const contentType = response.headers.get("content-type") || "";
 
-        } else if (value <= 60) {
+            if (contentType.includes("application/json")) {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorData.message || errorMessage;
+            } else {
+                const errorText = await response.text();
+                if (errorText) {
+                    errorMessage = errorText.slice(0, 250);
+                }
+            }
 
-            progressText.innerText =
-                "Uploading image...";
-
-        } else if (value <= 90) {
-
-            progressText.innerText =
-                "Processing...";
-
-        } else {
-
-            progressText.innerText =
-                "Almost ready...";
-
+            throw new Error(errorMessage);
         }
 
-        if (value >= 100) {
+        // Backend से PNG Blob प्राप्त करें
+        const pngBlob = await response.blob();
 
-            clearInterval(timer);
-
-            progressText.innerText =
-                "Backend connection required";
-
-            setTimeout(function () {
-
-                alert(
-                    "Frontend सही काम कर रहा है। अब असली AI Background Removal के लिए Backend/API जोड़ना बाकी है।"
-                );
-
-            }, 300);
-
+        if (!pngBlob.size) {
+            throw new Error("Backend से खाली रिज़ल्ट मिला।");
         }
 
-    }, 150);
+        if (
+            pngBlob.type &&
+            !pngBlob.type.includes("image/png") &&
+            !pngBlob.type.includes("application/octet-stream")
+        ) {
+            throw new Error("Backend ने PNG इमेज नहीं भेजी।");
+        }
 
+        progressFill.style.width = "95%";
+        progressText.innerText = "रिज़ल्ट तैयार हो रहा है...";
+
+        // पुराना URL हटाएँ
+        if (resultUrl) {
+            URL.revokeObjectURL(resultUrl);
+        }
+
+        resultUrl = URL.createObjectURL(pngBlob);
+
+        // रिज़ल्ट बॉक्स में PNG दिखाएँ
+        resultImage.onload = function () {
+            resultImage.style.display = "block";
+            resultText.style.display = "none";
+
+            progressFill.style.width = "100%";
+            progressText.innerText = "Background सफलतापूर्वक हट गया!";
+
+            downloadBtn.style.display = "block";
+            isProcessing = false;
+            removeBtn.disabled = false;
+        };
+
+        resultImage.onerror = function () {
+            if (resultUrl) {
+                URL.revokeObjectURL(resultUrl);
+                resultUrl = null;
+            }
+
+            throw new Error("प्राप्त रिज़ल्ट इमेज खुल नहीं पाई।");
+        };
+
+        resultImage.src = resultUrl;
+
+    } catch (error) {
+        console.error("Background removal error:", error);
+
+        progressFill.style.width = "100%";
+        progressText.innerText = "प्रोसेस पूरा नहीं हुआ";
+
+        alert("त्रुटि: " + error.message);
+
+        isProcessing = false;
+        removeBtn.disabled = !selectedImage;
+    }
 });
 
+// PNG डाउनलोड
+downloadBtn.addEventListener("click", function () {
+    if (!resultUrl) {
+        alert("पहले Background Remove करें।");
+        return;
+    }
 
-
-    link.href = resultImage.src;
-
-    link.download =
-        "vishal-bg-removed.png";
+    const link = document.createElement("a");
+    link.href = resultUrl;
+    link.download = "vishal-bg-removed.png";
 
     document.body.appendChild(link);
-
     link.click();
-
-    document.body.removeChild(link);
-
+    link.remove();
 });
 
-
-// ===============================
-// NEW PHOTO / RESET
-// ===============================
-
+// Reset / नई फोटो
 resetBtn.addEventListener("click", function () {
+    if (isProcessing) return;
 
     photoInput.value = "";
+    selectedImage = null;
 
-    originalImage.src = "";
-    resultImage.src = "";
+    if (resultUrl) {
+        URL.revokeObjectURL(resultUrl);
+        resultUrl = null;
+    }
+
+    originalImage.removeAttribute("src");
+    resultImage.removeAttribute("src");
 
     originalImage.style.display = "none";
     resultImage.style.display = "none";
 
     originalText.style.display = "block";
+    originalText.innerText = "No image selected";
+
     resultText.style.display = "block";
+    resultText.innerText = "Result will appear here";
 
     removeBtn.disabled = true;
-
     downloadBtn.style.display = "none";
 
     progress.style.display = "none";
-
     progressFill.style.width = "0%";
-
-    progressText.innerText =
-        "Preparing...";
-
-    selectedImage = null;
-
-    originalImageData = "";
-
+    progressText.innerText = "Preparing...";
 });
+
 
 </script>
 
