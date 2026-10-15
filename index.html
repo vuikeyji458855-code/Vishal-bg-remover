@@ -439,20 +439,6 @@ removeBtn.addEventListener("click", function () {
 });
 
 
-// ===============================
-// DOWNLOAD
-// ===============================
-
-downloadBtn.addEventListener("click", function () {
-
-    if (!resultImage.src) {
-
-        alert("पहले background remove करें।");
-        return;
-
-    }
-
-    const link = document.createElement("a");
 
     link.href = resultImage.src;
 
