@@ -1,62 +1,508 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vishal BG Remover</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vishal BG Remover</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial, sans-serif;
+}
+
+body{
+    min-height:100vh;
+    background:linear-gradient(145deg,#071a3d,#1557d6,#071a3d);
+    color:white;
+    padding:18px;
+}
+
+.header{
+    max-width:600px;
+    margin:auto;
+    text-align:center;
+    padding:18px 10px;
+}
+
+.logo{
+    width:58px;
+    height:58px;
+    margin:auto;
+    border-radius:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:30px;
+    background:linear-gradient(135deg,#ffffff,#bcd4ff);
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+
+.header h1{
+    margin-top:12px;
+    font-size:28px;
+}
+
+.header p{
+    margin-top:7px;
+    color:#d9e6ff;
+}
+
+.card{
+    max-width:600px;
+    margin:auto;
+    padding:20px;
+    border-radius:28px;
+    background:rgba(255,255,255,.13);
+    border:1px solid rgba(255,255,255,.25);
+    backdrop-filter:blur(18px);
+    box-shadow:0 20px 50px rgba(0,0,0,.25);
+}
+
+.upload{
+    border:2px dashed rgba(255,255,255,.55);
+    border-radius:22px;
+    min-height:190px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    text-align:center;
+    cursor:pointer;
+    transition:.25s;
+}
+
+.upload:hover{
+    background:rgba(255,255,255,.08);
+}
+
+.upload .icon{
+    font-size:52px;
+    margin-bottom:12px;
+}
+
+.upload h2{
+    font-size:22px;
+}
+
+.upload p{
+    color:#d5e2ff;
+    margin-top:7px;
+}
+
+input[type="file"]{
+    display:none;
+}
+
+.section-title{
+    font-size:20px;
+    margin:24px 0 12px;
+}
+
+.preview{
+    width:100%;
+    min-height:260px;
+    border-radius:20px;
+    background:#f4f4f4;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    position:relative;
+}
+
+.preview img{
+    max-width:100%;
+    max-height:420px;
+    display:none;
+    object-fit:contain;
+}
+
+.placeholder{
+    color:#777;
+    font-size:17px;
+}
+
+.btn{
+    width:100%;
+    border:0;
+    border-radius:17px;
+    padding:17px;
+    margin-top:16px;
+    font-size:18px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.remove{
+    color:white;
+    background:linear-gradient(135deg,#6d5dfc,#3b82f6);
+    box-shadow:0 10px 25px rgba(59,130,246,.35);
+}
+
+.remove:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+}
+
+.download{
+    color:white;
+    background:#12a36b;
+    display:none;
+}
+
+.reset{
+    color:white;
+    background:#ef4444;
+}
+
+.result{
+    background:
+    linear-gradient(45deg,#ddd 25%,transparent 25%),
+    linear-gradient(-45deg,#ddd 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,#ddd 75%),
+    linear-gradient(-45deg,transparent 75%,#ddd 75%);
+    background-size:28px 28px;
+    background-position:0 0,0 14px,14px -14px,-14px 0;
+}
+
+.progress{
+    display:none;
+    margin-top:18px;
+}
+
+.progress-text{
+    text-align:center;
+    margin-bottom:8px;
+}
+
+.progress-bar{
+    width:100%;
+    height:9px;
+    border-radius:20px;
+    background:rgba(255,255,255,.2);
+    overflow:hidden;
+}
+
+.progress-fill{
+    width:0%;
+    height:100%;
+    background:white;
+    transition:.3s;
+}
+
+.footer{
+    text-align:center;
+    color:#cbdcff;
+    margin:25px 0 10px;
+    font-size:14px;
+}
+
+@media(max-width:480px){
+    body{
+        padding:12px;
     }
-    .card {
-      background: #222;
-      padding: 24px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      text-align: center;
-      max-width: 400px;
-      width: 100%;
+
+    .card{
+        padding:16px;
+        border-radius:24px;
     }
-    input[type="file"] { margin: 15px 0; }
-    button {
-      background: #0070f3;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-      margin: 5px;
+
+    .header h1{
+        font-size:25px;
     }
-    button:disabled { opacity: 0.5; }
-    img {
-      max-width: 100%;
-      margin-top: 15px;
-      border-radius: 8px;
-    }
-  </style>
+}
+</style>
 </head>
+
 <body>
-  <div class="card">
+
+<div class="header">
+    <div class="logo">✂️</div>
     <h1>Vishal BG Remover</h1>
-    <input type="file" id="imageInput" accept="image/*" />
-    <br />
-    <button id="removeBtn">Remove Background</button>
-    <br />
-    <img id="resultImage" style="display:none;" />
-    <br />
-    <a id="downloadLink" style="display:none;">
-      <button>Download PNG</button>
-    </a>
-  </div>
+    <p>Professional AI Background Removal</p>
+</div>
+
+<div class="card">
+
+    <label class="upload" for="photoInput">
+        <div class="icon">📸</div>
+        <h2>Upload Photo</h2>
+        <p>Tap here to select JPG, PNG or WEBP</p>
+    </label>
+
+    <input
+        type="file"
+        id="photoInput"
+        accept="image/png,image/jpeg,image/webp"
+    >
+
+    <div class="section-title">Original Image</div>
+
+    <div class="preview">
+        <span class="placeholder" id="originalText">
+            No image selected
+        </span>
+
+        <img id="originalImage">
+    </div>
+
+    <button class="btn remove" id="removeBtn" disabled>
+        ✨ Remove Background
+    </button>
+
+    <div class="progress" id="progress">
+        <div class="progress-text" id="progressText">
+            Preparing...
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <div class="section-title">
+        Result — Transparent Background
+    </div>
+
+    <div class="preview result">
+        <span class="placeholder" id="resultText">
+            Result will appear here
+        </span>
+
+        <img id="resultImage">
+    </div>
+
+    <button class="btn download" id="downloadBtn">
+        ⬇️ Download PNG
+    </button>
+
+    <button class="btn reset" id="resetBtn">
+        🔄 New Photo
+    </button>
+
+</div>
+
+<div class="footer">
+    Vishal BG Remover • AI Background Removal
+</div>
+
+<script>
+
+const photoInput = document.getElementById("photoInput");
+const originalImage = document.getElementById("originalImage");
+const resultImage = document.getElementById("resultImage");
+
+const originalText = document.getElementById("originalText");
+const resultText = document.getElementById("resultText");
+
+const removeBtn = document.getElementById("removeBtn");
+const downloadBtn = document.getElementById("downloadBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+const progress = document.getElementById("progress");
+const progressFill = document.getElementById("progressFill");
+const progressText = document.getElementById("progressText");
+
+let selectedImage = null;
+let originalImageData = "";
+
+
+// ===============================
+// PHOTO SELECT
+// ===============================
+
+photoInput.addEventListener("change", function () {
+
+    const file = this.files[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+        alert("कृपया JPG, PNG या WEBP फोटो चुनें।");
+        return;
+    }
+
+    selectedImage = file;
+
+    const reader = new FileReader();
+
+    reader.onload = function (event) {
+
+        originalImageData = event.target.result;
+
+        originalImage.onload = function () {
+
+            originalImage.style.display = "block";
+            originalText.style.display = "none";
+
+            removeBtn.disabled = false;
+
+        };
+
+        originalImage.onerror = function () {
+
+            alert("फोटो load नहीं हो पाई। दूसरी फोटो चुनें।");
+
+        };
+
+        originalImage.src = originalImageData;
+
+    };
+
+    reader.readAsDataURL(file);
+
+    // Reset previous result
+    resultImage.src = "";
+    resultImage.style.display = "none";
+
+    resultText.style.display = "block";
+
+    downloadBtn.style.display = "none";
+
+    progress.style.display = "none";
+    progressFill.style.width = "0%";
+
+});
+
+
+// ===============================
+// REMOVE BACKGROUND
+// ===============================
+
+removeBtn.addEventListener("click", function () {
+
+    if (!selectedImage) {
+
+        alert("पहले फोटो चुनें।");
+        return;
+
+    }
+
+    progress.style.display = "block";
+
+    progressFill.style.width = "0%";
+
+    let value = 0;
+
+    progressText.innerText = "Preparing...";
+
+    const timer = setInterval(function () {
+
+        value += 10;
+
+        progressFill.style.width = value + "%";
+
+        if (value <= 30) {
+
+            progressText.innerText =
+                "Preparing image...";
+
+        } else if (value <= 60) {
+
+            progressText.innerText =
+                "Uploading image...";
+
+        } else if (value <= 90) {
+
+            progressText.innerText =
+                "Processing...";
+
+        } else {
+
+            progressText.innerText =
+                "Almost ready...";
+
+        }
+
+        if (value >= 100) {
+
+            clearInterval(timer);
+
+            progressText.innerText =
+                "Backend connection required";
+
+            setTimeout(function () {
+
+                alert(
+                    "Frontend सही काम कर रहा है। अब असली AI Background Removal के लिए Backend/API जोड़ना बाकी है।"
+                );
+
+            }, 300);
+
+        }
+
+    }, 150);
+
+});
+
+
+// ===============================
+// DOWNLOAD
+// ===============================
+
+downloadBtn.addEventListener("click", function () {
+
+    if (!resultImage.src) {
+
+        alert("पहले background remove करें।");
+        return;
+
+    }
+
+    const link = document.createElement("a");
+
+    link.href = resultImage.src;
+
+    link.download =
+        "vishal-bg-removed.png";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+});
+
+
+// ===============================
+// NEW PHOTO / RESET
+// ===============================
+
+resetBtn.addEventListener("click", function () {
+
+    photoInput.value = "";
+
+    originalImage.src = "";
+    resultImage.src = "";
+
+    originalImage.style.display = "none";
+    resultImage.style.display = "none";
+
+    originalText.style.display = "block";
+    resultText.style.display = "block";
+
+    removeBtn.disabled = true;
+
+    downloadBtn.style.display = "none";
+
+    progress.style.display = "none";
+
+    progressFill.style.width = "0%";
+
+    progressText.innerText =
+        "Preparing...";
+
+    selectedImage = null;
+
+    originalImageData = "";
+
+});
+
+</script>
+
 </body>
 </html>
